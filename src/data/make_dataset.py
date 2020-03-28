@@ -7,6 +7,9 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
+from datetime import datetime
+import yfinance as yf
+
 
 def get_snp_500_companies_list(save_csv=True):
     """gets the list of fortune 500 companies from wikipedia
@@ -25,15 +28,33 @@ def get_snp_500_companies_list(save_csv=True):
 
     # Convert to df:
     df_SP500 = pd.read_html(str(table), header=0, flavor='html5lib')[0]
+    df_SP500 = df_SP500.rename(columns={'Security': 'Company Name'})
     if save_csv:
-        df_SP500.to_csv('../data/raw/sp500.csv')
+        df_SP500.to_csv('../../data/raw/sp500.csv')
 
     return df_SP500
 
 
-def get_data_from_yahoo():
+def get_data_from_yahoo(save_csv=True):
 
-    pass
+    df = get_snp_500_companies_list(save_csv=False)
+
+    year = 2018
+    month = 1
+    day = 1
+
+    min_date = datetime(year, month, day)
+
+    tickers = df.Symbol.to_list()
+    data = yf.download(tickers=" ".join(tickers),
+                       period="5Y")
+
+    filtered_data = data.loc[min_date:, 'Adj Close']
+    
+    if save_csv:
+        filtered_data.to_csv('data/raw/finance_data.csv')
+
+    return filtered_data
 
 
 def get_today_fear_index():
@@ -61,7 +82,6 @@ def get_today_fear_index():
         greed_dict[k] = int(val.group())
 
     return pd.DataFrame(greed_dict, index=[datetime.now()])
-
 
 
 @click.command()
